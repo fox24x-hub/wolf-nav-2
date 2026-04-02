@@ -5,12 +5,15 @@
     {
       "src": "https://cdn-icons-png.flaticon.com/512/854/854878.png",
       "type": "image/png",
-      "sizes": "512x512"
+      "sizes": "512x512",
+      "purpose": "any maskable"
     }
   ],
   "start_url": "./index.html",
   "background_color": "#f8f7f4",
   "display": "standalone",
   "scope": "./",
-  "theme_color": "#2d5a4a"
+  "theme_color": "#2d5a4a",
+  "orientation": "portrait",
+  "description": "Навигатор для забега Степной Волк 2026"
 }
