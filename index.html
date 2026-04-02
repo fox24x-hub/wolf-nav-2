@@ -41,6 +41,7 @@
       background:var(--surface); cursor:pointer; font-weight:600; font-size:0.8rem;
       transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:0.4rem;
       touch-action: manipulation;
+      min-height: 44px; /* Для тача */
     }
     .btn:active { transform:scale(0.96); background:var(--surface-2); }
     .btn-active { background:var(--primary)!important; color:#fff!important; border-color:var(--primary); }
@@ -51,6 +52,7 @@
       background:var(--surface-2); border:1px solid var(--border);
       padding:0.4rem 0.75rem; border-radius:100px; font-size:0.75rem; font-weight:600;
       cursor:pointer; transition:all 0.2s;
+      min-height: 32px;
     }
     .pill.active { background:var(--text); color:#fff; border-color:var(--text); }
 
@@ -60,6 +62,7 @@
       padding:1rem; background:var(--surface-2); border-radius:12px;
       cursor:pointer; border:2px solid transparent; transition:all 0.2s;
       position:relative; overflow:hidden;
+      min-height: 70px;
     }
     .stop.active { border-color:var(--primary); background:#fff; box-shadow:var(--shadow); }
     .stop.active::before {
@@ -80,19 +83,21 @@
     .detail-panel {
       background:#fff; border:1px solid var(--border); border-radius:var(--radius);
       margin-bottom: 1rem; overflow:hidden; animation:slideDown 0.3s ease;
+      max-height: 60vh;
+      overflow-y: auto;
     }
     @keyframes slideDown {
       from { opacity:0; transform:translateY(-10px); }
       to { opacity:1; transform:translateY(0); }
     }
-    .detail-header { padding:1rem; background:var(--primary); color:#fff; display:flex; justify-content:space-between; align-items:center; }
-    .detail-close { background:none; border:none; color:#fff; font-size:1.5rem; cursor:pointer; padding:0 0.25rem; }
+    .detail-header { padding:1rem; background:var(--primary); color:#fff; display:flex; justify-content:space-between; align-items:center; position: sticky; top: 0; z-index: 10; }
+    .detail-close { background:none; border:none; color:#fff; font-size:1.5rem; cursor:pointer; padding:0 0.25rem; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
     .detail-body { padding:1rem; display:flex; flex-direction:column; gap:0.8rem; }
     .detail-section h4 { font-size:0.65rem; text-transform:uppercase; color:var(--muted); margin-bottom:0.3rem; letter-spacing:0.05em; }
     .detail-section p { font-size:0.85rem; line-height:1.5; }
     .detail-tips { list-style:none; font-size:0.8rem; background: var(--surface-2); padding: 0.8rem; border-radius: 8px; border-left: 3px solid var(--accent); }
-    .detail-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; }
-    .action-btn { flex: 1; padding: 0.6rem; border-radius: 8px; font-size: 0.75rem; text-align: center; text-decoration: none; font-weight: 600; }
+    .detail-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
+    .action-btn { flex: 1; padding: 0.6rem; border-radius: 8px; font-size: 0.75rem; text-align: center; text-decoration: none; font-weight: 600; min-height: 40px; display: flex; align-items: center; justify-content: center; }
     .action-yandex { background: #fc3f1d; color: #fff; }
     .action-google { background: #4285f4; color: #fff; }
 
@@ -113,6 +118,9 @@
       background:rgba(26,26,26,0.92); color:#fff; padding:12px 24px;
       border-radius:100px; z-index:1000; display:flex; gap:20px;
       backdrop-filter:blur(10px); font-size:0.85rem; box-shadow:var(--shadow-lg);
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 90%;
     }
 
     .user-location-marker {
@@ -124,12 +132,26 @@
       100% { transform:scale(1); opacity:1; }
     }
 
+    /* TOAST */
+    .toast {
+      position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
+      background: rgba(45,90,74,0.95); color: white; padding: 12px 24px;
+      border-radius: 24px; z-index: 10000; font-size: 14px;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: fadeIn 0.3s;
+      pointer-events: none;
+    }
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translate(-50%, 20px); }
+      to { opacity: 1; transform: translate(-50%, 0); }
+    }
+
     /* MOBILE */
     @media (max-width:1024px) {
-      .app { grid-template-columns:1fr; grid-template-rows:45vh 55vh; }
+      .app { grid-template-columns:1fr; grid-template-rows:40vh 60vh; }
       .sidebar { border-right:none; border-bottom:1px solid var(--border); padding:1rem; }
       .app-title { font-size:1.25rem; }
-      .stats-overlay { font-size:0.75rem; padding:8px 16px; bottom:10px; }
+      .stats-overlay { font-size:0.75rem; padding:8px 16px; bottom:10px; gap: 10px; }
+      .detail-panel { max-height: 50vh; }
     }
     
     /* Pull indicator for mobile */
@@ -139,6 +161,12 @@
     }
     @media (max-width:1024px) {
       .pull-indicator { display:block; }
+    }
+    
+    /* Оптимизация для тача */
+    @media (hover: none) {
+      .btn:hover { transform: none; }
+      .stop:hover { transform: none; }
     }
   </style>
 </head>
@@ -181,7 +209,7 @@
 </div>
 
 <script>
-// Исправленные данные с правильными day-группами
+// Данные маршрута
 const points = [
   {
     id: 'ekb', day: 1, title: 'Екатеринбург', badge: 'Старт',
@@ -336,7 +364,11 @@ function focusPoint(idx) {
   const p = points[idx];
   
   // Сохраняем в localStorage
-  localStorage.setItem('steppenwolf_last_point', idx);
+  try {
+    localStorage.setItem('steppenwolf_last_point', idx);
+  } catch (e) {
+    console.log('localStorage не доступен');
+  }
 
   // UI Updates
   document.querySelectorAll('.stop').forEach(s => s.classList.remove('active'));
@@ -346,8 +378,10 @@ function focusPoint(idx) {
     activeStop.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
-  // Виброотклик на мобильных
-  if (navigator.vibrate) navigator.vibrate(50);
+  // Виброотклик на мобильных (только если разрешено)
+  if (navigator.vibrate && window.matchMedia('(pointer: coarse)').matches) {
+    navigator.vibrate(50);
+  }
 
   // Detail Panel
   const panel = document.getElementById('detailPanel');
@@ -355,7 +389,7 @@ function focusPoint(idx) {
   panel.innerHTML = `
     <div class="detail-header">
       <h3>${p.title}</h3>
-      <button class="detail-close" onclick="document.getElementById('detailPanel').style.display='none'">×</button>
+      <button class="detail-close" onclick="document.getElementById('detailPanel').style.display='none'" aria-label="Закрыть">×</button>
     </div>
     <div class="detail-body">
       <div class="detail-section"><h4>Что это</h4><p>${p.object}</p></div>
@@ -363,8 +397,8 @@ function focusPoint(idx) {
       <div class="detail-section"><h4>Как проехать</h4><p>${p.way}</p></div>
       <div class="detail-tips">${p.tips}</div>
       <div class="detail-actions">
-        <a class="action-btn action-yandex" href="https://yandex.ru/maps/?pt=${p.lng},${p.lat}&z=15&l=map" target="_blank">Яндекс Карты</a>
-        <a class="action-btn action-google" href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}" target="_blank">Google Maps</a>
+        <a class="action-btn action-yandex" href="https://yandex.ru/maps/?pt=${p.lng},${p.lat}&z=15&l=map" target="_blank" rel="noopener">Яндекс Карты</a>
+        <a class="action-btn action-google" href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}" target="_blank" rel="noopener">Google Maps</a>
       </div>
     </div>
   `;
@@ -400,9 +434,12 @@ function getDistance(lat1, lon1, lat2, lon2) {
 
 function toggleGeo() {
   if (!navigator.geolocation) {
-    alert('Геолокация не поддерживается');
+    showToast('Геолокация не поддерживается браузером');
     return;
   }
+  
+  const btn = document.getElementById('geoBtn');
+  btn.classList.add('btn-active');
   
   navigator.geolocation.getCurrentPosition(pos => {
     userPos = [pos.coords.latitude, pos.coords.longitude];
@@ -432,11 +469,19 @@ function toggleGeo() {
       }
     });
     
-    if (minDist < 50) { // Если ближе 50 км
+    if (minDist < 50 && isVoiceEnabled) {
       speak(`Вы рядом с точкой ${points[nearestIdx].title}`);
     }
+    
+    setTimeout(() => btn.classList.remove('btn-active'), 1000);
   }, err => {
-    alert('Не удалось получить геопозицию: ' + err.message);
+    console.error('Geolocation error:', err);
+    showToast('Не удалось получить геопозицию. Проверьте разрешения.');
+    btn.classList.remove('btn-active');
+  }, {
+    enableHighAccuracy: true,
+    timeout: 10000,
+    maximumAge: 60000
   });
 }
 
@@ -453,11 +498,13 @@ function toggleFollow() {
         if (userMarker) userMarker.setLatLng(userPos);
         if (isFollowing) map.panTo(userPos);
         updateMetrics();
-      }, null, { enableHighAccuracy: true });
+      }, null, { enableHighAccuracy: true, maximumAge: 10000 });
+      showToast('Слежение включено');
     }
   } else {
     btn.innerHTML = '🚗 Еду сейчас';
     if (watchId) navigator.geolocation.clearWatch(watchId);
+    showToast('Слежение выключено');
   }
 }
 
@@ -475,7 +522,19 @@ function speak(text) {
   const msg = new SpeechSynthesisUtterance(text);
   msg.lang = 'ru-RU';
   msg.rate = 0.9;
+  msg.pitch = 1;
   window.speechSynthesis.speak(msg);
+}
+
+function showToast(message) {
+  const existing = document.querySelector('.toast');
+  if (existing) existing.remove();
+  
+  const toast = document.createElement('div');
+  toast.className = 'toast';
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
 }
 
 function filterDay(day, btn) {
@@ -517,38 +576,10 @@ function prevPoint() {
   if (currentIndex > 0) focusPoint(currentIndex - 1); 
 }
 
-// Восстановление последней точки при загрузке
-window.onload = () => {
-  const saved = localStorage.getItem('steppenwolf_last_point');
-  if (saved !== null) {
-    focusPoint(parseInt(saved));
-  } else {
-    focusPoint(0);
-  }
-};
-
-// Обработка свайпов для мобильных
-let touchStartY = 0;
-document.addEventListener('touchstart', e => {
-  touchStartY = e.touches[0].clientY;
-});
-document.addEventListener('touchend', e => {
-  const touchEndY = e.changedTouches[0].clientY;
-  const diff = touchStartY - touchEndY;
-  if (Math.abs(diff) > 50) { // Свайп больше 50px
-    if (diff > 0 && currentIndex < points.length - 1) {
-      nextPoint(); // Свайп вверх - следующая точка
-    } else if (diff < 0 && currentIndex > 0) {
-      prevPoint(); // Свайп вниз - предыдущая точка
-    }
-  }
-});
-
-renderList();
-</script>
+// Восстановление последней точки при загрузке + инициализация
+window.addEventListener('load', () => {
   // Регистрация Service Worker
-if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
+  if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js')
       .then((registration) => {
         console.log('SW зарегистрирован:', registration.scope);
@@ -566,30 +597,58 @@ if ('serviceWorker' in navigator) {
       .catch((error) => {
         console.log('SW ошибка:', error);
       });
-  });
+      
+    // Отслеживание состояния сети
+    window.addEventListener('online', () => {
+      showToast('Соединение восстановлено');
+    });
+    
+    window.addEventListener('offline', () => {
+      showToast('Офлайн-режим: карты сохранены');
+    });
+  }
   
-  // Отслеживание возвращения онлайн
-  window.addEventListener('online', () => {
-    showToast('Соединение восстановлено');
-  });
+  // Восстановление точки
+  try {
+    const saved = localStorage.getItem('steppenwolf_last_point');
+    if (saved !== null) {
+      focusPoint(parseInt(saved));
+    } else {
+      focusPoint(0);
+    }
+  } catch (e) {
+    focusPoint(0);
+  }
+});
+
+// Обработка свайпов для мобильных (только на сайдбаре, не на карте)
+let touchStartY = 0;
+const sidebar = document.querySelector('.sidebar');
+if (sidebar) {
+  sidebar.addEventListener('touchstart', e => {
+    touchStartY = e.touches[0].clientY;
+  }, { passive: true });
   
-  window.addEventListener('offline', () => {
-    showToast('Офлайн-режим: карты сохранены');
-  });
+  sidebar.addEventListener('touchend', e => {
+    const touchEndY = e.changedTouches[0].clientY;
+    const diff = touchStartY - touchEndY;
+    if (Math.abs(diff) > 80) { // Свайп больше 80px
+      if (diff > 0 && currentIndex < points.length - 1) {
+        nextPoint();
+      } else if (diff < 0 && currentIndex > 0) {
+        prevPoint();
+      }
+    }
+  }, { passive: true });
 }
 
-// Вспомогательная функция для тостов
-function showToast(message) {
-  const toast = document.createElement('div');
-  toast.style.cssText = `
-    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
-    background: rgba(45,90,74,0.95); color: white; padding: 12px 24px;
-    border-radius: 24px; z-index: 10000; font-size: 14px;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: fadeIn 0.3s;
-  `;
-  toast.textContent = message;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), 3000);
-}
+// Клавиатурная навигация
+document.addEventListener('keydown', (e) => {
+  if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nextPoint();
+  if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') prevPoint();
+});
+
+renderList();
+</script>
 </body>
 </html>
