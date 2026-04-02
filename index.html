@@ -546,5 +546,50 @@ document.addEventListener('touchend', e => {
 
 renderList();
 </script>
+  // Регистрация Service Worker
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('./sw.js')
+      .then((registration) => {
+        console.log('SW зарегистрирован:', registration.scope);
+        
+        // Проверка обновлений каждые 30 минут
+        setInterval(() => {
+          registration.update();
+        }, 30 * 60 * 1000);
+        
+        // Уведомление о доступности офлайн-режима
+        if (!navigator.onLine) {
+          showToast('Работаем в офлайн-режиме');
+        }
+      })
+      .catch((error) => {
+        console.log('SW ошибка:', error);
+      });
+  });
+  
+  // Отслеживание возвращения онлайн
+  window.addEventListener('online', () => {
+    showToast('Соединение восстановлено');
+  });
+  
+  window.addEventListener('offline', () => {
+    showToast('Офлайн-режим: карты сохранены');
+  });
+}
+
+// Вспомогательная функция для тостов
+function showToast(message) {
+  const toast = document.createElement('div');
+  toast.style.cssText = `
+    position: fixed; bottom: 80px; left: 50%; transform: translateX(-50%);
+    background: rgba(45,90,74,0.95); color: white; padding: 12px 24px;
+    border-radius: 24px; z-index: 10000; font-size: 14px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3); animation: fadeIn 0.3s;
+  `;
+  toast.textContent = message;
+  document.body.appendChild(toast);
+  setTimeout(() => toast.remove(), 3000);
+}
 </body>
 </html>
