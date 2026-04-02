@@ -278,6 +278,13 @@ function filterDay(day) {
     }
   });
 }
-</script>
+
+<script>
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js')
+      .then(() => console.log("Оффлайн-режим готов!"))
+      .catch((err) => console.log("Ошибка SW:", err));
+  }
+</script>  
 </body>
 </html>
