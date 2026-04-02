@@ -1,0 +1,283 @@
+<!DOCTYPE html>
+<html lang="ru" data-theme="light">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Навигатор: Степной Волк 2026</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <style>
+    :root, [data-theme="light"] {
+      --bg:#f8f7f4; --surface:#fff; --surface-2:#f0efe9; --border:#e0ddd5;
+      --text:#1a1a1a; --muted:#666; --primary:#2d5a4a; --accent:#c1772f;
+      --ok:#3a7d5c; --warn:#d4a03d; --alt:#8b4557; --danger:#c44d56;
+      --d1:#2563eb; --d2:#059669; --d3:#dc2626;
+      --shadow:0 4px 20px rgba(0,0,0,0.08); --shadow-lg:0 10px 40px rgba(0,0,0,0.12);
+      --radius:16px; --font-ui:'Inter',sans-serif; --font-display:'Playfair Display',serif;
+    }
+    * { box-sizing: border-box; margin: 0; }
+    body { font-family: var(--font-ui); background: var(--bg); color: var(--text); line-height: 1.6; }
+    
+    .app { display: grid; grid-template-columns: 420px 1fr; min-height: 100vh; }
+    
+    .sidebar { 
+      background: var(--surface); border-right: 1px solid var(--border); 
+      padding: 1.5rem; overflow-y: auto; display: flex; flex-direction: column; gap: 1rem;
+    }
+
+    /* Новые стили для управления */
+    .nav-panel {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 0.5rem;
+      background: var(--surface-2); padding: 1rem; border-radius: var(--radius);
+    }
+    .btn {
+      padding: 0.75rem; border-radius: 12px; border: 1px solid var(--border);
+      background: var(--surface); cursor: pointer; font-weight: 600; font-size: 0.85rem;
+      transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 0.5rem;
+    }
+    .btn:hover { background: var(--primary); color: white; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-active { background: var(--accent); color: white; border-color: var(--accent); }
+
+    .stats-overlay {
+      position: absolute; bottom: 2rem; left: 50%; transform: translateX(-50%);
+      background: rgba(0,0,0,0.8); color: white; padding: 1rem 2rem;
+      border-radius: 100px; z-index: 1000; display: flex; gap: 2rem;
+      backdrop-filter: blur(8px); font-weight: 500;
+    }
+
+    /* Старые стили */
+    header h1 { font-family: var(--font-display); font-size: 1.5rem; }
+    .controls { display: flex; gap: 0.4rem; flex-wrap: wrap; }
+    .pill { background: var(--surface-2); border: 1px solid var(--border); padding: 0.4rem 0.8rem; border-radius: 100px; font-size: 0.7rem; font-weight: 600; cursor: pointer; }
+    .pill.active { background: var(--primary); color: white; }
+    
+    .stop { padding: 0.75rem; background: var(--surface-2); border-radius: 12px; margin-bottom: 0.5rem; cursor: pointer; border: 2px solid transparent; }
+    .stop.active { border-color: var(--primary); background: #fff; }
+    .stop-title { font-weight: 600; font-size: 0.9rem; }
+    
+    .map-container { position: relative; height: 100vh; }
+    #map { width: 100%; height: 100%; }
+    
+    .info-card {
+      position: absolute; top: 1.5rem; right: 1.5rem; width: 320px;
+      background: rgba(255,255,255,0.95); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 1.25rem; box-shadow: var(--shadow-lg); z-index: 1000;
+    }
+
+    .user-marker { background: #2563eb; border: 3px solid white; border-radius: 50%; box-shadow: 0 0 10px rgba(0,0,0,0.3); }
+
+    @media (max-width: 1024px) {
+      .app { grid-template-columns: 1fr; }
+      .sidebar { max-height: 40vh; }
+      .map-container { height: 60vh; }
+      .stats-overlay { width: 90%; font-size: 0.8rem; bottom: 1rem; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="app">
+  <aside class="sidebar">
+    <header>
+      <h1>Степной Волк 2026</h1>
+      <p style="font-size: 0.8rem; color: var(--muted);">Интерактивный штурман</p>
+    </header>
+
+    <div class="nav-panel">
+      <button class="btn" onclick="prevPoint()">← Назад</button>
+      <button class="btn" onclick="nextPoint()">Вперед →</button>
+      <button class="btn" id="geoBtn" onclick="toggleGeo()">📍 Я здесь</button>
+      <button class="btn" id="followBtn" onclick="toggleFollow()">🚗 Еду сейчас</button>
+      <button class="btn" id="voiceBtn" onclick="toggleVoice()" style="grid-column: span 2;">🔊 Голосовой гид: Выкл</button>
+    </div>
+
+    <div class="controls">
+      <button class="pill active" onclick="filterDay(0)">Все</button>
+      <button class="pill" onclick="filterDay(1)">15 мая</button>
+      <button class="pill" onclick="filterDay(2)">16 мая</button>
+      <button class="pill" onclick="filterDay(3)">17 мая</button>
+    </div>
+
+    <div id="stopList">
+      </div>
+  </aside>
+
+  <main class="map-container">
+    <div id="map"></div>
+    
+    <div class="stats-overlay" id="statsOverlay">
+      <div id="distNext">Дистанция: ---</div>
+      <div id="timeNext">Время: ---</div>
+    </div>
+
+    <div class="info-card" id="infoCard">
+      <h3>Начните маршрут</h3>
+      <p>Нажмите "Вперед" или выберите точку на карте.</p>
+    </div>
+  </main>
+</div>
+
+<script>
+const points = [
+  { id: 'ekb', day: 1, title: 'Екатеринбург', lat: 56.8389, lng: 60.6057, desc: 'Старт в 6:00. Полный бак, кофе в дорогу.', voice: 'Выезжаем из Екатеринбурга. Курс на Челябинск.' },
+  { id: 'porogi', day: 1, title: 'ГЭС Пороги', lat: 55.0486, lng: 58.6668, desc: 'Старейшая ГЭС. Остановка 40 мин.', voice: 'Через несколько километров будет историческая ГЭС Пороги. Отличное место для отдыха.' },
+  { id: 'verhneuralsk', day: 1, title: 'Верхнеуральск', lat: 53.8764, lng: 59.2103, desc: 'Запасная точка. Казачья столица.', voice: 'Проезжаем Верхнеуральск.' },
+  { id: 'magnitka', day: 1, title: 'Магнитогорск', lat: 53.4072, lng: 58.9791, desc: 'Обед и заправка.', voice: 'Магнитогорск. Пора подкрепиться и заправить машину.' },
+  { id: 'orsk', day: 1, title: 'Орск', lat: 51.2000, lng: 58.5667, desc: 'Граница Европы и Азии. Старый город.', voice: 'Впереди Орск. Мы пересекаем границу Европы и Азии.' },
+  { id: 'orenburg', day: 1, title: 'Оренбург', lat: 51.7682, lng: 55.0967, desc: 'Финиш дня. Заселение.', voice: 'Прибыли в Оренбург. Время отдыхать.' },
+  { id: 'soliletsk', day: 2, title: 'Соль-Илецк', lat: 51.1833, lng: 54.9833, desc: 'Соленые озера. Рекавери для ног.', voice: 'Едем на соленые озера в Соль Илецк.' },
+  { id: 'center', day: 2, title: 'Набережная', lat: 51.7628, lng: 55.1005, desc: 'Пешая прогулка по центру.', voice: 'Прогулка по центру Оренбурга.' },
+  { id: 'start', day: 3, title: 'Андреевка', lat: 51.783, lng: 56.36, desc: 'СТАРТ ЗАБЕГА!', voice: 'Внимание! Мы на месте старта. Степной волк ждет!' }
+];
+
+let currentIndex = -1;
+let userPos = null;
+let userMarker = null;
+let isFollowing = false;
+let isVoiceEnabled = false;
+let watchId = null;
+
+// Инициализация карты
+const map = L.map('map').setView([56.8, 60.6], 7);
+L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png').addTo(map);
+
+const markers = points.map((p, idx) => {
+  const m = L.circleMarker([p.lat, p.lng], {
+    radius: 8, fillColor: '#2d5a4a', color: '#fff', weight: 2, fillOpacity: 1
+  }).addTo(map);
+  m.on('click', () => focusPoint(idx));
+  return m;
+});
+
+// Отрисовка списка
+const stopList = document.getElementById('stopList');
+points.forEach((p, idx) => {
+  stopList.innerHTML += `
+    <div class="stop" id="stop-${idx}" onclick="focusPoint(${idx})">
+      <div class="stop-title">${p.title}</div>
+      <div style="font-size:0.75rem; color:var(--muted)">День ${p.day}</div>
+    </div>
+  `;
+});
+
+// ГЕОЛОКАЦИЯ
+function toggleGeo() {
+  if (!navigator.geolocation) return alert("Гео не поддерживается");
+  
+  navigator.geolocation.getCurrentPosition(pos => {
+    userPos = [pos.coords.latitude, pos.coords.longitude];
+    updateUserMarker(userPos);
+    map.flyTo(userPos, 12);
+    updateMetrics();
+  });
+}
+
+function toggleFollow() {
+  isFollowing = !isFollowing;
+  const btn = document.getElementById('followBtn');
+  btn.classList.toggle('btn-active');
+  
+  if (isFollowing) {
+    watchId = navigator.geolocation.watchPosition(pos => {
+      userPos = [pos.coords.latitude, pos.coords.longitude];
+      updateUserMarker(userPos);
+      if (isFollowing) map.panTo(userPos);
+      updateMetrics();
+    }, null, { enableHighAccuracy: true });
+  } else {
+    navigator.geolocation.clearWatch(watchId);
+  }
+}
+
+function updateUserMarker(latlng) {
+  if (!userMarker) {
+    userMarker = L.circleMarker(latlng, { radius: 10, className: 'user-marker', fillColor: '#2563eb', fillOpacity: 1, color: '#fff' }).addTo(map);
+  } else {
+    userMarker.setLatLng(latlng);
+  }
+}
+
+// НАВИГАЦИЯ
+function focusPoint(idx) {
+  if (idx < 0 || idx >= points.length) return;
+  currentIndex = idx;
+  const p = points[idx];
+  
+  map.flyTo([p.lat, p.lng], 10);
+  
+  // UI
+  document.querySelectorAll('.stop').forEach(s => s.classList.remove('active'));
+  document.getElementById(`stop-${idx}`).classList.add('active');
+  document.getElementById(`stop-${idx}`).scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+
+  document.getElementById('infoCard').innerHTML = `
+    <h3>${p.title}</h3>
+    <p>${p.desc}</p>
+    <div style="margin-top:10px; font-size:0.8rem; color:var(--primary)">Точка ${idx+1} из ${points.length}</div>
+  `;
+
+  if (isVoiceEnabled) speak(p.voice);
+  updateMetrics();
+}
+
+function nextPoint() { focusPoint(currentIndex + 1); }
+function prevPoint() { focusPoint(currentIndex - 1); }
+
+// МЕТРИКИ (Расстояние и время)
+function updateMetrics() {
+  if (!userPos || currentIndex === -1 || currentIndex === points.length - 1) return;
+  
+  const next = points[currentIndex + 1];
+  const dist = getDistance(userPos[0], userPos[1], next.lat, next.lng);
+  const time = Math.round((dist / 80) * 60); // Средняя скорость 80 км/ч
+
+  document.getElementById('distNext').innerText = `До следующей: ${dist.toFixed(1)} км`;
+  document.getElementById('timeNext').innerText = `В пути: ~${time} мин`;
+}
+
+function getDistance(lat1, lon1, lat2, lon2) {
+  const R = 6371;
+  const dLat = (lat2 - lat1) * Math.PI / 180;
+  const dLon = (lon2 - lon1) * Math.PI / 180;
+  const a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+            Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * Math.sin(dLon/2) * Math.sin(dLon/2);
+  return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+}
+
+// ГОЛОС
+function toggleVoice() {
+  isVoiceEnabled = !isVoiceEnabled;
+  document.getElementById('voiceBtn').innerText = isVoiceEnabled ? "🔊 Голосовой гид: ВКЛ" : "🔊 Голосовой гид: ВЫКЛ";
+  document.getElementById('voiceBtn').classList.toggle('btn-active');
+  if (isVoiceEnabled) speak("Голосовое сопровождение активировано");
+}
+
+function speak(text) {
+  window.speechSynthesis.cancel();
+  const utterance = new SpeechSynthesisUtterance(text);
+  utterance.lang = 'ru-RU';
+  utterance.rate = 0.9;
+  window.speechSynthesis.speak(utterance);
+}
+
+function filterDay(day) {
+  document.querySelectorAll('.pill').forEach(b => b.classList.remove('active'));
+  event.target.classList.add('active');
+  points.forEach((p, i) => {
+    const el = document.getElementById(`stop-${i}`);
+    if (day === 0 || p.day === day) {
+      el.style.display = 'block';
+      markers[i].addTo(map);
+    } else {
+      el.style.display = 'none';
+      map.removeLayer(markers[i]);
+    }
+  });
+}
+</script>
+</body>
+</html>
