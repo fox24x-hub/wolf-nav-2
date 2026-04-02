@@ -10,7 +10,9 @@
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Playfair+Display:wght@600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
 
   <style>
     :root {
@@ -25,7 +27,6 @@
 
     .app { display:grid; grid-template-columns:400px 1fr; height:100vh; }
 
-    /* SIDEBAR */
     .sidebar {
       background:var(--surface); border-right:1px solid var(--border);
       padding:1.25rem; overflow-y:auto; display:flex; flex-direction:column; gap:0.75rem; z-index:10;
@@ -41,11 +42,15 @@
       background:var(--surface); cursor:pointer; font-weight:600; font-size:0.8rem;
       transition:all 0.2s; display:flex; align-items:center; justify-content:center; gap:0.4rem;
       touch-action: manipulation;
-      min-height: 44px; /* Для тача */
+      min-height: 44px;
     }
     .btn:active { transform:scale(0.96); background:var(--surface-2); }
     .btn-active { background:var(--primary)!important; color:#fff!important; border-color:var(--primary); }
     .btn-accent { background:var(--accent); color:#fff; border-color:var(--accent); }
+    .btn-nav { background: #fc3f1d; color: #fff; border-color: #fc3f1d; }
+
+    .mode-toggle { display: flex; gap: 0.5rem; margin-bottom: 0.5rem; }
+    .mode-btn { flex: 1; font-size: 0.7rem; padding: 0.5rem; }
 
     .day-pills { display:flex; gap:0.4rem; flex-wrap:wrap; margin-bottom:0.5rem; }
     .pill {
@@ -56,7 +61,6 @@
     }
     .pill.active { background:var(--text); color:#fff; border-color:var(--text); }
 
-    /* STOP CARDS */
     #stopList { display: flex; flex-direction: column; gap: 0.5rem; }
     .stop {
       padding:1rem; background:var(--surface-2); border-radius:12px;
@@ -79,7 +83,6 @@
     .badge-rest { background:rgba(193,119,47,0.12); color:var(--accent); }
     .badge-race { background:rgba(220,38,38,0.1); color:#dc2626; }
 
-    /* DETAIL PANEL */
     .detail-panel {
       background:#fff; border:1px solid var(--border); border-radius:var(--radius);
       margin-bottom: 1rem; overflow:hidden; animation:slideDown 0.3s ease;
@@ -97,13 +100,35 @@
     .detail-section p { font-size:0.85rem; line-height:1.5; }
     .detail-tips { list-style:none; font-size:0.8rem; background: var(--surface-2); padding: 0.8rem; border-radius: 8px; border-left: 3px solid var(--accent); }
     .detail-actions { display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; }
-    .action-btn { flex: 1; padding: 0.6rem; border-radius: 8px; font-size: 0.75rem; text-align: center; text-decoration: none; font-weight: 600; min-height: 40px; display: flex; align-items: center; justify-content: center; }
+    .action-btn { flex: 1; padding: 0.6rem; border-radius: 8px; font-size: 0.75rem; text-align: center; text-decoration: none; font-weight: 600; min-height: 40px; display: flex; align-items: center; justify-content: center; border: none; cursor: pointer; }
     .action-yandex { background: #fc3f1d; color: #fff; }
     .action-google { background: #4285f4; color: #fff; }
+    .action-start { background: #2d5a4a; color: #fff; }
 
-    /* MAP & OVERLAY */
+    .route-info {
+      background: var(--surface-2);
+      padding: 0.75rem;
+      border-radius: 8px;
+      font-size: 0.8rem;
+      margin-bottom: 0.5rem;
+      display: none;
+    }
+    .route-info.active { display: block; }
+
     .map-container { position:relative; width:100%; height:100%; }
     #map { width:100%; height:100%; z-index:1; }
+    
+    .leaflet-routing-container {
+      background: white;
+      border-radius: 12px;
+      box-shadow: var(--shadow-lg);
+      margin: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+      font-family: var(--font-ui);
+      font-size: 0.8rem;
+    }
+    .leaflet-routing-alt { display: none; }
     
     .route-line {
       stroke-dasharray: 12 8;
@@ -132,7 +157,6 @@
       100% { transform:scale(1); opacity:1; }
     }
 
-    /* TOAST */
     .toast {
       position: fixed; bottom: 100px; left: 50%; transform: translateX(-50%);
       background: rgba(45,90,74,0.95); color: white; padding: 12px 24px;
@@ -145,25 +169,15 @@
       to { opacity: 1; transform: translate(-50%, 0); }
     }
 
-    /* MOBILE */
     @media (max-width:1024px) {
       .app { grid-template-columns:1fr; grid-template-rows:40vh 60vh; }
       .sidebar { border-right:none; border-bottom:1px solid var(--border); padding:1rem; }
       .app-title { font-size:1.25rem; }
       .stats-overlay { font-size:0.75rem; padding:8px 16px; bottom:10px; gap: 10px; }
       .detail-panel { max-height: 50vh; }
+      .leaflet-routing-container { max-width: 250px; font-size: 0.7rem; }
     }
     
-    /* Pull indicator for mobile */
-    .pull-indicator {
-      display:none; width:40px; height:4px; background:var(--border);
-      border-radius:2px; margin:0 auto 0.5rem;
-    }
-    @media (max-width:1024px) {
-      .pull-indicator { display:block; }
-    }
-    
-    /* Оптимизация для тача */
     @media (hover: none) {
       .btn:hover { transform: none; }
       .stop:hover { transform: none; }
@@ -173,10 +187,18 @@
 <body>
 <div class="app">
   <aside class="sidebar">
-    <div class="pull-indicator"></div>
     <div>
       <div class="app-title">Степной Волк 2026</div>
-      <div class="app-sub">Екатеринбург → Оренбург → Андреевка</div>
+      <div class="app-sub">Екатеринбург (ул. Ленина, 99) → Оренбург → Андреевка</div>
+    </div>
+
+    <div class="mode-toggle">
+      <button class="btn mode-btn btn-active" id="modeRoad" onclick="setRouteMode('road')">По дорогам</button>
+      <button class="btn mode-btn" id="modeLine" onclick="setRouteMode('line')">Прямая линия</button>
+    </div>
+
+    <div class="route-info" id="routeInfo">
+      <strong>Маршрут:</strong> <span id="routeDistance">--</span> км, <span id="routeTime">--</span> мин
     </div>
 
     <div class="nav-panel">
@@ -184,6 +206,7 @@
       <button class="btn btn-accent" onclick="nextPoint()">Вперед →</button>
       <button class="btn" id="geoBtn" onclick="toggleGeo()">📍 Я здесь</button>
       <button class="btn" id="followBtn" onclick="toggleFollow()">🚗 Еду сейчас</button>
+      <button class="btn btn-nav nav-panel-full" onclick="openExternalNav()">🧭 Поехать (Яндекс)</button>
       <button class="btn nav-panel-full" id="voiceBtn" onclick="toggleVoice()">🔊 Голос: Выкл</button>
     </div>
 
@@ -209,21 +232,30 @@
 </div>
 
 <script>
-// Данные маршрута
 const points = [
   {
-    id: 'ekb', day: 1, title: 'Екатеринбург', badge: 'Старт',
-    lat: 56.8389, lng: 60.6057, meta: '15 мая · 06:00',
-    desc: 'Точка сбора. Проверка снаряжения, заправка бака.',
-    voice: 'Начинаем путешествие. Курс на юг, в сторону Челябинска.',
-    object: 'Мегаполис, точка старта Р354/М5.',
-    look: 'Вид на город с объездной. Убедитесь, что взяли запас воды.',
-    way: 'Выезд через Челябинский тракт. Держитесь правой полосы для выхода на М5.',
-    tips: 'Заправьтесь на АЗС перед выездом из города, следующая удобная точка через 100 км.'
+    id: 'ekb', 
+    day: 1, 
+    title: 'Екатеринбург, ул. Ленина 99', 
+    badge: 'Старт',
+    lat: 56.838926, 
+    lng: 60.605344, 
+    meta: '15 мая · 06:00 · ул. Ленина, 99',
+    desc: 'Точка сбора: ул. Ленина, д. 99 (Дом Союзов). Центр города, рядом с площадью 1905 года.',
+    voice: 'Начинаем путешествие. Точка сбора у Дома Союзов на Ленина 99. Курс на юг, в сторону Челябинска.',
+    object: 'Дом Союзов (историческое здание), центр Екатеринбурга. Рядом площадь 1905 года и набережная Рабочей Молодёжи.',
+    look: 'Вид на городскую площадь с фонтаном и исторический центр. Убедитесь, что взяли запас воды и питание.',
+    way: 'Выезд с ул. Ленина через перекресток с ул. 8 Марта, далее на Челябинский тракт (Р354) через Арамиль. Держитесь правой полосы для выхода на М5.',
+    tips: 'Парковка доступна вдоль ул. Ленина или на площади 1905 года (в выходные). Ближайшая АЗС: Газпромнефть на ул. Московской (500м) или Лукойл на ул. Блюхера. Заправьтесь полным баком!'
   },
   {
-    id: 'porogi', day: 1, title: 'ГЭС Пороги', badge: 'Осмотр',
-    lat: 55.0486, lng: 58.6668, meta: '15 мая · ~280 км пути',
+    id: 'porogi', 
+    day: 1, 
+    title: 'ГЭС Пороги', 
+    badge: 'Осмотр',
+    lat: 55.0486, 
+    lng: 58.6668, 
+    meta: '15 мая · ~280 км от Екб',
     desc: 'Старейшая действующая ГЭС России. Каменная плотина в узком ущелье.',
     voice: 'Через 30 километров поворот на Сатку к ГЭС Пороги. Дорога будет каменистой.',
     object: 'Памятник индустриального зодчества 1910 года.',
@@ -232,8 +264,13 @@ const points = [
     tips: 'Здесь плохая связь. Сохраните карту заранее. На ГЭС можно выпить кофе в отеле рядом.'
   },
   {
-    id: 'verhneuralsk', day: 1, title: 'Верхнеуральск', badge: 'Запасной',
-    lat: 53.8764, lng: 59.2103, meta: '15 мая · Исторический центр',
+    id: 'verhneuralsk', 
+    day: 1, 
+    title: 'Верхнеуральск', 
+    badge: 'Запасной',
+    lat: 53.8764, 
+    lng: 59.2103, 
+    meta: '15 мая · Исторический центр',
     desc: 'Старейший город Челябинской области. Бывшая казачья столица.',
     voice: 'Проезжаем Верхнеуральск. Если есть время — загляните в Никольский собор.',
     object: 'Город-музей под открытым небом.',
@@ -242,8 +279,13 @@ const points = [
     tips: 'Удобное место для покупки местных продуктов в дорогу.'
   },
   {
-    id: 'orsk', day: 1, title: 'Орск', badge: 'Ужин',
-    lat: 51.2000, lng: 58.5667, meta: '15 мая · Граница Е-А',
+    id: 'orsk', 
+    day: 1, 
+    title: 'Орск', 
+    badge: 'Ужин',
+    lat: 51.2000, 
+    lng: 58.5667, 
+    meta: '15 мая · Граница Европа-Азия',
     desc: 'Город на границе Европы и Азии. Знаменит своими пирожками и старым городом.',
     voice: 'Подъезжаем к Орску. Мы пересекаем границу Европы и Азии по мосту через Урал.',
     object: 'Промышленный и исторический центр Оренбуржья.',
@@ -252,8 +294,13 @@ const points = [
     tips: 'Обязательно попробуйте орские старогородские пирожки — это местный бренд.'
   },
   {
-    id: 'orenburg', day: 1, title: 'Оренбург (ночлег)', badge: 'База',
-    lat: 51.7682, lng: 55.0967, meta: '15 мая · Ночлег',
+    id: 'orenburg', 
+    day: 1, 
+    title: 'Оренбург (ночлег)', 
+    badge: 'База',
+    lat: 51.7682, 
+    lng: 55.0967, 
+    meta: '15 мая · Ночлег',
     desc: 'Столица края. Место отдыха перед тренировочным днем.',
     voice: 'Добро пожаловать в Оренбург. Финиш первого дня.',
     object: 'Квартира/отель в центре города.',
@@ -262,8 +309,13 @@ const points = [
     tips: 'Закажите ужин заранее, чтобы сразу лечь отдыхать.'
   },
   {
-    id: 'center', day: 2, title: 'Центр Оренбурга', badge: 'Прогулка',
-    lat: 51.7628, lng: 55.1005, meta: '16 мая · Утро',
+    id: 'center', 
+    day: 2, 
+    title: 'Центр Оренбурга', 
+    badge: 'Прогулка',
+    lat: 51.7628, 
+    lng: 55.1005, 
+    meta: '16 мая · Утро',
     desc: 'Спокойная прогулка по городу. Набережная, мосты, кафе.',
     voice: 'Сегодня день отдыха. Прогулка по центру Оренбурга.',
     object: 'Исторический центр города.',
@@ -272,8 +324,13 @@ const points = [
     tips: 'Не перегружайте ноги перед стартом. Максимум 5-7 км пешком.'
   },
   {
-    id: 'soliletsk', day: 2, title: 'Соль-Илецк', badge: 'Рекавери',
-    lat: 51.1833, lng: 54.9833, meta: '16 мая · Соленые озера',
+    id: 'soliletsk', 
+    day: 2, 
+    title: 'Соль-Илецк', 
+    badge: 'Рекавери',
+    lat: 51.1833, 
+    lng: 54.9833, 
+    meta: '16 мая · Соленые озера',
     desc: 'Курорт с солеными озерами, аналог Мертвого моря. Восстановление мышц.',
     voice: 'Едем восстанавливать ноги в соленых озерах Соль-Илецка.',
     object: 'Озеро Развал.',
@@ -282,8 +339,13 @@ const points = [
     tips: 'Возьмите с собой пресную воду в бутылках — смыть соль после купания. Не больше 20 минут в воде.'
   },
   {
-    id: 'start', day: 3, title: 'Андреевка (Саракташ)', badge: 'ГОНКА',
-    lat: 51.783, lng: 56.36, meta: '17 мая · СТАРТ',
+    id: 'start', 
+    day: 3, 
+    title: 'Андреевка (Саракташ)', 
+    badge: 'ГОНКА',
+    lat: 51.783, 
+    lng: 56.36, 
+    meta: '17 мая · СТАРТ',
     desc: 'Место проведения забега «Степной Волк». Саракташский район.',
     voice: 'Мы прибыли на место старта. Степной Волк ждет!',
     object: 'Стартовый городок в степи.',
@@ -299,15 +361,16 @@ let userMarker = null;
 let isFollowing = false;
 let isVoiceEnabled = false;
 let watchId = null;
+let routeMode = 'road';
+let routingControls = [];
+let simpleLines = [];
 
-// Инициализация карты
 const map = L.map('map', { zoomControl: false }).setView([54.0, 58.0], 6);
 L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
   attribution: '&copy; CARTO',
   maxZoom: 19
 }).addTo(map);
 
-// Создание маркеров
 const markers = points.map((p, idx) => {
   const color = p.day === 1 ? '#2563eb' : p.day === 2 ? '#059669' : '#dc2626';
   const m = L.circleMarker([p.lat, p.lng], {
@@ -321,31 +384,142 @@ const markers = points.map((p, idx) => {
   return m;
 });
 
-// Отрисовка маршрута по дням
-const routeLines = [];
-function drawRoutes() {
-  // День 1: Екб -> Пороги -> Верхнеуральск -> Орск -> Оренбург
-  const day1Coords = points.filter(p => p.day === 1).map(p => [p.lat, p.lng]);
-  const line1 = L.polyline(day1Coords, {
-    color: '#2563eb', weight: 4, opacity: 0.7, className: 'route-line'
-  }).addTo(map);
-  routeLines.push(line1);
+function setRouteMode(mode) {
+  routeMode = mode;
+  document.getElementById('modeRoad').classList.toggle('btn-active', mode === 'road');
+  document.getElementById('modeLine').classList.toggle('btn-active', mode === 'line');
   
-  // День 2: Оренбург -> Центр (локально) -> Соль-Илецк -> обратно
-  const day2Coords = [[51.7682,55.0967], [51.7628,55.1005], [51.1833,54.9833], [51.7682,55.0967]];
-  const line2 = L.polyline(day2Coords, {
-    color: '#059669', weight: 4, opacity: 0.7, dashArray: '10,10'
-  }).addTo(map);
-  routeLines.push(line2);
-  
-  // День 3: Оренбург -> Андреевка
-  const day3Coords = [[51.7682,55.0967], [51.783,56.36]];
-  const line3 = L.polyline(day3Coords, {
-    color: '#dc2626', weight: 5, opacity: 0.9
-  }).addTo(map);
-  routeLines.push(line3);
+  if (mode === 'road') {
+    buildRoadRoutes();
+    showToast('Строим маршрут по дорогам...');
+  } else {
+    clearRoadRoutes();
+    buildSimpleLines();
+    showToast('Прямые линии между точками');
+  }
 }
-drawRoutes();
+
+function buildRoadRoutes() {
+  clearRoadRoutes();
+  clearSimpleLines();
+  
+  const day1Points = points.filter(p => p.day === 1);
+  const day2Points = points.filter(p => p.day === 2);
+  
+  if (day1Points.length >= 2) {
+    createRoute(day1Points, '#2563eb');
+  }
+  
+  if (day2Points.length >= 2) {
+    const day2Coords = [points[4], points[5], points[6], points[4]];
+    createRoute(day2Coords, '#059669');
+  }
+  
+  const day3Coords = [points[4], points[7]];
+  createRoute(day3Coords, '#dc2626');
+}
+
+function createRoute(waypoints, color) {
+  try {
+    const router = L.Routing.osrmv1({
+      serviceUrl: 'https://router.project-osrm.org/route/v1',
+      profile: 'driving'
+    });
+    
+    const plan = new L.Routing.Plan(waypoints.map(p => L.latLng(p.lat, p.lng)), {
+      createMarker: () => null,
+      draggableWaypoints: false,
+      addWaypoints: false
+    });
+    
+    const control = L.Routing.control({
+      router: router,
+      plan: plan,
+      routeWhileDragging: false,
+      showAlternatives: false,
+      lineOptions: {
+        styles: [{ color: color, opacity: 0.8, weight: 5 }]
+      },
+      collapsible: true,
+      show: false
+    }).addTo(map);
+    
+    control.on('routesfound', function(e) {
+      const routes = e.routes;
+      const summary = routes[0].summary;
+      const distance = (summary.totalDistance / 1000).toFixed(1);
+      const time = Math.round(summary.totalTime / 60);
+      
+      if (currentIndex !== -1 && points[currentIndex].day === waypoints[0].day) {
+        document.getElementById('routeInfo').classList.add('active');
+        document.getElementById('routeDistance').textContent = distance;
+        document.getElementById('routeTime').textContent = time;
+      }
+    });
+    
+    routingControls.push(control);
+  } catch (e) {
+    console.error('Ошибка построения маршрута:', e);
+    const latlngs = waypoints.map(p => [p.lat, p.lng]);
+    const line = L.polyline(latlngs, { color: color, weight: 4, opacity: 0.7, dashArray: '10,10' }).addTo(map);
+    simpleLines.push(line);
+  }
+}
+
+function buildSimpleLines() {
+  clearRoadRoutes();
+  clearSimpleLines();
+  
+  const day1Coords = points.filter(p => p.day === 1).map(p => [p.lat, p.lng]);
+  const line1 = L.polyline(day1Coords, { color: '#2563eb', weight: 4, opacity: 0.7, className: 'route-line' }).addTo(map);
+  simpleLines.push(line1);
+  
+  const day2Coords = [[51.7682,55.0967], [51.7628,55.1005], [51.1833,54.9833], [51.7682,55.0967]];
+  const line2 = L.polyline(day2Coords, { color: '#059669', weight: 4, opacity: 0.7, dashArray: '10,10' }).addTo(map);
+  simpleLines.push(line2);
+  
+  const day3Coords = [[51.7682,55.0967], [51.783,56.36]];
+  const line3 = L.polyline(day3Coords, { color: '#dc2626', weight: 5, opacity: 0.9 }).addTo(map);
+  simpleLines.push(line3);
+}
+
+function clearRoadRoutes() {
+  routingControls.forEach(control => {
+    try {
+      map.removeControl(control);
+    } catch(e) {}
+  });
+  routingControls = [];
+  document.getElementById('routeInfo').classList.remove('active');
+}
+
+function clearSimpleLines() {
+  simpleLines.forEach(line => map.removeLayer(line));
+  simpleLines = [];
+}
+
+function openExternalNav() {
+  if (currentIndex === -1) {
+    showToast('Сначала выберите точку');
+    return;
+  }
+  
+  const p = points[currentIndex];
+  
+  const yandexApp = `yandexnavi://build_route_on_map?lat_to=${p.lat}&lon_to=${p.lng}&lat_from=${userPos ? userPos[0] : points[0].lat}&lon_from=${userPos ? userPos[1] : points[0].lng}`;
+  
+  const yandexWeb = `https://yandex.ru/maps/?rtext=${userPos ? userPos[0] : points[0].lat},${userPos ? userPos[1] : points[0].lng}~${p.lat},${p.lng}&rtt=auto`;
+  
+  window.location.href = yandexApp;
+  
+  setTimeout(() => {
+    if (!document.hidden) {
+      if (confirm('Открыть в Яндекс.Картах (в браузере)?')) {
+        window.open(yandexWeb, '_blank');
+      }
+    }
+  }, 500);
+}
 
 function renderList() {
   const list = document.getElementById('stopList');
@@ -363,14 +537,10 @@ function focusPoint(idx) {
   currentIndex = idx;
   const p = points[idx];
   
-  // Сохраняем в localStorage
   try {
     localStorage.setItem('steppenwolf_last_point', idx);
-  } catch (e) {
-    console.log('localStorage не доступен');
-  }
+  } catch (e) {}
 
-  // UI Updates
   document.querySelectorAll('.stop').forEach(s => s.classList.remove('active'));
   const activeStop = document.getElementById(`stop-${idx}`);
   if (activeStop) {
@@ -378,12 +548,10 @@ function focusPoint(idx) {
     activeStop.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
   }
 
-  // Виброотклик на мобильных (только если разрешено)
   if (navigator.vibrate && window.matchMedia('(pointer: coarse)').matches) {
     navigator.vibrate(50);
   }
 
-  // Detail Panel
   const panel = document.getElementById('detailPanel');
   panel.style.display = 'block';
   panel.innerHTML = `
@@ -397,13 +565,15 @@ function focusPoint(idx) {
       <div class="detail-section"><h4>Как проехать</h4><p>${p.way}</p></div>
       <div class="detail-tips">${p.tips}</div>
       <div class="detail-actions">
-        <a class="action-btn action-yandex" href="https://yandex.ru/maps/?pt=${p.lng},${p.lat}&z=15&l=map" target="_blank" rel="noopener">Яндекс Карты</a>
-        <a class="action-btn action-google" href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}" target="_blank" rel="noopener">Google Maps</a>
+        ${idx === 0 ? `<a class="action-btn action-start" href="https://yandex.ru/maps/?text=Екатеринбург, ул. Ленина, 99" target="_blank" rel="noopener">📍 Точка сбора</a>` : ''}
+        <a class="action-btn action-yandex" href="https://yandex.ru/maps/?pt=${p.lng},${p.lat}&z=15&l=map" target="_blank" rel="noopener">Яндекс</a>
+        <a class="action-btn action-google" href="https://www.google.com/maps/search/?api=1&query=${p.lat},${p.lng}" target="_blank" rel="noopener">Google</a>
+        ${idx !== 0 ? `<button class="action-btn btn-nav" onclick="openExternalNav()" style="width:100%;margin-top:0.5rem;">🧭 Поехать сюда</button>` : ''}
       </div>
     </div>
   `;
 
-  map.flyTo([p.lat, p.lng], 13, { duration: 1.5 });
+  map.flyTo([p.lat, p.lng], idx === 0 ? 16 : 13, { duration: 1.5 });
   if (isVoiceEnabled) speak(p.voice);
   updateMetrics();
   updateProgress();
@@ -413,7 +583,7 @@ function updateMetrics() {
   if (!userPos || currentIndex === -1) return;
   const p = points[currentIndex];
   const dist = getDistance(userPos[0], userPos[1], p.lat, p.lng);
-  const time = Math.round(dist/80 * 60); // При средней скорости 80 км/ч
+  const time = Math.round(dist/80 * 60);
   
   document.getElementById('distNext').innerText = `До цели: ${dist < 1 ? (dist*1000).toFixed(0) + ' м' : dist.toFixed(1) + ' км'}`;
   document.getElementById('timeNext').innerText = `В пути: ~${time} мин`;
@@ -434,7 +604,7 @@ function getDistance(lat1, lon1, lat2, lon2) {
 
 function toggleGeo() {
   if (!navigator.geolocation) {
-    showToast('Геолокация не поддерживается браузером');
+    showToast('Геолокация не поддерживается');
     return;
   }
   
@@ -458,25 +628,9 @@ function toggleGeo() {
     map.setView(userPos, 14);
     updateMetrics();
     
-    // Находим ближайшую точку
-    let minDist = Infinity;
-    let nearestIdx = 0;
-    points.forEach((p, idx) => {
-      const d = getDistance(userPos[0], userPos[1], p.lat, p.lng);
-      if (d < minDist) {
-        minDist = d;
-        nearestIdx = idx;
-      }
-    });
-    
-    if (minDist < 50 && isVoiceEnabled) {
-      speak(`Вы рядом с точкой ${points[nearestIdx].title}`);
-    }
-    
     setTimeout(() => btn.classList.remove('btn-active'), 1000);
   }, err => {
-    console.error('Geolocation error:', err);
-    showToast('Не удалось получить геопозицию. Проверьте разрешения.');
+    showToast('Не удалось получить геопозицию');
     btn.classList.remove('btn-active');
   }, {
     enableHighAccuracy: true,
@@ -541,7 +695,6 @@ function filterDay(day, btn) {
   document.querySelectorAll('.pill').forEach(p => p.classList.remove('active'));
   btn.classList.add('active');
   
-  // Фильтрация списка
   points.forEach((p, idx) => {
     const el = document.getElementById(`stop-${idx}`);
     if (day === 0 || p.day === day) {
@@ -553,16 +706,19 @@ function filterDay(day, btn) {
     }
   });
   
-  // Показываем/скрываем линии маршрутов
-  routeLines.forEach((line, idx) => {
-    if (day === 0 || idx === day - 1) {
-      map.addLayer(line);
+  if (routeMode === 'road') {
+    clearRoadRoutes();
+    if (day === 0) {
+      buildRoadRoutes();
     } else {
-      map.removeLayer(line);
+      const dayPoints = points.filter(p => p.day === day);
+      if (dayPoints.length >= 2) {
+        const color = day === 1 ? '#2563eb' : day === 2 ? '#059669' : '#dc2626';
+        createRoute(dayPoints, color);
+      }
     }
-  });
+  }
   
-  // Центрируем карту
   if (day === 1) map.flyTo([54, 59], 6);
   if (day === 2) map.flyTo([51.5, 55], 9);
   if (day === 3) map.flyTo([51.78, 56], 10);
@@ -576,39 +732,20 @@ function prevPoint() {
   if (currentIndex > 0) focusPoint(currentIndex - 1); 
 }
 
-// Восстановление последней точки при загрузке + инициализация
 window.addEventListener('load', () => {
-  // Регистрация Service Worker
   if ('serviceWorker' in navigator) {
     navigator.serviceWorker.register('./sw.js')
       .then((registration) => {
         console.log('SW зарегистрирован:', registration.scope);
-        
-        // Проверка обновлений каждые 30 минут
-        setInterval(() => {
-          registration.update();
-        }, 30 * 60 * 1000);
-        
-        // Уведомление о доступности офлайн-режима
-        if (!navigator.onLine) {
-          showToast('Работаем в офлайн-режиме');
-        }
+        setInterval(() => registration.update(), 30 * 60 * 1000);
+        if (!navigator.onLine) showToast('Работаем в офлайн-режиме');
       })
-      .catch((error) => {
-        console.log('SW ошибка:', error);
-      });
+      .catch((error) => console.log('SW ошибка:', error));
       
-    // Отслеживание состояния сети
-    window.addEventListener('online', () => {
-      showToast('Соединение восстановлено');
-    });
-    
-    window.addEventListener('offline', () => {
-      showToast('Офлайн-режим: карты сохранены');
-    });
+    window.addEventListener('online', () => showToast('Соединение восстановлено'));
+    window.addEventListener('offline', () => showToast('Офлайн-режим'));
   }
   
-  // Восстановление точки
   try {
     const saved = localStorage.getItem('steppenwolf_last_point');
     if (saved !== null) {
@@ -619,9 +756,10 @@ window.addEventListener('load', () => {
   } catch (e) {
     focusPoint(0);
   }
+  
+  setTimeout(() => buildRoadRoutes(), 1000);
 });
 
-// Обработка свайпов для мобильных (только на сайдбаре, не на карте)
 let touchStartY = 0;
 const sidebar = document.querySelector('.sidebar');
 if (sidebar) {
@@ -632,17 +770,13 @@ if (sidebar) {
   sidebar.addEventListener('touchend', e => {
     const touchEndY = e.changedTouches[0].clientY;
     const diff = touchStartY - touchEndY;
-    if (Math.abs(diff) > 80) { // Свайп больше 80px
-      if (diff > 0 && currentIndex < points.length - 1) {
-        nextPoint();
-      } else if (diff < 0 && currentIndex > 0) {
-        prevPoint();
-      }
+    if (Math.abs(diff) > 80) {
+      if (diff > 0 && currentIndex < points.length - 1) nextPoint();
+      else if (diff < 0 && currentIndex > 0) prevPoint();
     }
   }, { passive: true });
 }
 
-// Клавиатурная навигация
 document.addEventListener('keydown', (e) => {
   if (e.key === 'ArrowRight' || e.key === 'ArrowDown') nextPoint();
   if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') prevPoint();
