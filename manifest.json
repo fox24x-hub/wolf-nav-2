@@ -1,0 +1,16 @@
+{
+  "short_name": "Волк-Нави",
+  "name": "Степной Волк 2026 Навигатор",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/854/854878.png",
+      "type": "image/png",
+      "sizes": "512x512"
+    }
+  ],
+  "start_url": "./index.html",
+  "background_color": "#f8f7f4",
+  "display": "standalone",
+  "scope": "./",
+  "theme_color": "#2d5a4a"
+}
