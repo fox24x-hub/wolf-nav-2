@@ -7,6 +7,11 @@
     content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"
   />
   <meta name="theme-color" content="#2d5a4a" />
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="Степной Волк">
+  <link rel="apple-touch-icon" href="./icons/icon-192.png">
+
   <title>Навигатор: Степной Волк 2026</title>
 
   <link rel="manifest" href="./manifest.json" />
@@ -39,7 +44,6 @@
       --muted: #666;
       --primary: #2d5a4a;
       --accent: #c1772f;
-      --danger: #c03434;
       --blue: #2563eb;
       --green: #059669;
       --red: #dc2626;
@@ -72,6 +76,7 @@
       display: grid;
       grid-template-columns: 390px 1fr;
       height: 100vh;
+      height: 100dvh;
     }
 
     .sidebar {
@@ -477,6 +482,7 @@
       position: relative;
       min-width: 0;
       min-height: 0;
+      height: 100%;
     }
 
     #map {
@@ -593,58 +599,63 @@
     }
 
     @media (max-width: 1024px) {
+      html, body {
+        height: 100%;
+        overflow: hidden;
+      }
+
       .app {
-        display: block;
-        height: 100vh;
+        display: grid;
+        grid-template-columns: 1fr;
+        grid-template-rows: 42vh 58vh;
+        grid-template-rows: 42dvh 58dvh;
+        height: 100dvh;
       }
 
       .map-container {
-        height: 100vh;
+        position: relative;
+        height: 100%;
+        min-height: 0;
       }
 
       .sidebar {
-        position: fixed;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        top: auto;
-        height: 58vh;
+        position: relative;
+        height: 100%;
+        min-height: 0;
+        overflow-y: auto;
         border-right: none;
         border-top: 1px solid var(--border);
         border-radius: 18px 18px 0 0;
-        transform: translateY(53%);
-        transition: transform .25s ease;
-        box-shadow: 0 -12px 40px rgba(0,0,0,.16);
+        transform: none !important;
+        box-shadow: none;
+        z-index: 20;
+        padding-bottom: 28px;
       }
 
       .sidebar.open {
-        transform: translateY(0);
+        transform: none !important;
       }
 
       .mobile-sheet-toggle {
-        display: flex;
-        justify-content: center;
-        padding-bottom: 6px;
-        cursor: pointer;
+        display: none !important;
       }
 
-      .mobile-sheet-toggle::before {
-        content: '';
-        width: 44px;
-        height: 5px;
-        border-radius: 999px;
-        background: #d2cdc3;
+      #map {
+        height: 100%;
+        width: 100%;
+        touch-action: pan-x pan-y;
       }
 
       .stats-overlay {
-        bottom: 14px;
+        bottom: 10px;
         font-size: .74rem;
         padding: 8px 12px;
+        max-width: calc(100% - 16px);
       }
 
       .fab-row {
-        right: 12px;
-        bottom: 84px;
+        right: 10px;
+        bottom: 78px;
       }
 
       .detail-grid,
@@ -654,6 +665,12 @@
 
       .action-btn {
         flex-basis: 100%;
+      }
+
+      .leaflet-routing-container {
+        max-width: calc(100vw - 24px);
+        max-height: 180px;
+        font-size: .74rem;
       }
     }
 
@@ -923,6 +940,10 @@
     }).setView([54.2, 57.8], 6);
 
     L.control.zoom({ position: 'topright' }).addTo(map);
+
+    if (window.matchMedia('(max-width: 1024px)').matches) {
+      map.scrollWheelZoom.disable();
+    }
 
     L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
       attribution: '&copy; CARTO',
@@ -1599,26 +1620,6 @@
       window.addEventListener('offline', () => {
         showToast('Офлайн-режим: маршрут по дорогам может быть недоступен');
       });
-
-      const sidebar = document.getElementById('sidebar');
-      const toggle = document.getElementById('sheetToggle');
-
-      if (toggle) {
-        toggle.addEventListener('click', () => sidebar.classList.toggle('open'));
-      }
-
-      let touchStartY = 0;
-      sidebar.addEventListener('touchstart', e => {
-        touchStartY = e.touches[0].clientY;
-      }, { passive: true });
-
-      sidebar.addEventListener('touchend', e => {
-        const diff = touchStartY - e.changedTouches[0].clientY;
-        if (Math.abs(diff) > 90 && !window.matchMedia('(min-width: 1025px)').matches) {
-          if (diff < 0) sidebar.classList.remove('open');
-          if (diff > 0) sidebar.classList.add('open');
-        }
-      }, { passive: true });
     }
 
     function registerServiceWorker() {
@@ -1666,14 +1667,15 @@
       applyDayFilter(0);
 
       setTimeout(() => {
+        map.invalidateSize();
         if (appState.routeMode === 'road') buildRoadRoutes();
       }, 300);
 
-      if (window.matchMedia('(max-width: 1024px)').matches) {
-        document.getElementById('sidebar').classList.remove('open');
-      } else {
-        document.getElementById('sidebar').classList.add('open');
-      }
+      document.getElementById('sidebar').classList.add('open');
+
+      window.addEventListener('resize', () => {
+        setTimeout(() => map.invalidateSize(), 100);
+      });
     }
 
     bootstrap();
