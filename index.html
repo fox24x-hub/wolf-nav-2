@@ -134,6 +134,11 @@
       gap: 8px;
     }
 
+    .mode-stack {
+      display: grid;
+      gap: 8px;
+    }
+
     .nav-panel .full {
       grid-column: 1 / -1;
     }
@@ -322,12 +327,12 @@
       text-transform: uppercase;
     }
 
-    .badge-start, .badge-sight, .badge-food, .badge-spare {
+    .badge-start, .badge-sight, .badge-food, .badge-spare, .badge-view {
       background: rgba(58,125,92,.12);
       color: #336b52;
     }
 
-    .badge-base {
+    .badge-base, .badge-historic {
       background: rgba(45,90,74,.11);
       color: var(--primary);
     }
@@ -594,10 +599,6 @@
       display: none;
     }
 
-    .mobile-sheet-toggle {
-      display: none;
-    }
-
     @media (max-width: 1024px) {
       html, body {
         height: 100%;
@@ -632,14 +633,6 @@
         padding-bottom: 28px;
       }
 
-      .sidebar.open {
-        transform: none !important;
-      }
-
-      .mobile-sheet-toggle {
-        display: none !important;
-      }
-
       #map {
         height: 100%;
         width: 100%;
@@ -659,7 +652,9 @@
       }
 
       .detail-grid,
-      .legend {
+      .legend,
+      .mode-toggle,
+      .nav-panel {
         grid-template-columns: 1fr;
       }
 
@@ -686,8 +681,6 @@
 <body>
   <div class="app">
     <aside class="sidebar" id="sidebar">
-      <div class="mobile-sheet-toggle" id="sheetToggle" aria-label="Развернуть панель"></div>
-
       <div class="hero">
         <div class="app-title">Степной Волк 2026</div>
         <div class="app-sub">
@@ -697,15 +690,19 @@
       </div>
 
       <div class="notice">
-        Маршрут внутри страницы строится через внешний онлайн-сервис маршрутизации.
-        Если интернет слабый, включай режим “Прямая линия”. Для реальной навигации
-        лучше открывать Яндекс или Google.
+        Режим <strong>⚡ Минимум</strong> показывает только самые сильные точки маршрута.
+        Режим <strong>📍 Полный</strong> — все остановки, включая тихие и запасные.
       </div>
 
-      <div class="card panel">
+      <div class="card panel mode-stack">
         <div class="mode-toggle">
           <button class="btn btn-active" id="modeRoadBtn" type="button">По дорогам</button>
           <button class="btn" id="modeLineBtn" type="button">Прямая линия</button>
+        </div>
+
+        <div class="mode-toggle">
+          <button class="btn" id="modeMinimalBtn" type="button">⚡ Минимум</button>
+          <button class="btn btn-active" id="modeFullBtn" type="button">📍 Полный</button>
         </div>
 
         <div class="route-info" id="routeInfo">
@@ -780,42 +777,57 @@
         badge: 'Старт',
         lat: 56.838926,
         lng: 60.605344,
-        meta: '15 мая · 06:00 · ул. Ленина, 99',
-        object: 'Точка сбора и старт выезда из центра Екатеринбурга.',
-        look: 'Проверь воду, питание, зарядки, документы и бак.',
-        way: 'Выезд через центр на Челябинский тракт, далее в сторону М5.',
-        tips: 'Заправь полный бак заранее. Утренний выезд лучше не затягивать.',
-        voice: 'Начинаем путешествие. Точка сбора на Ленина 99.'
+        meta: '15 мая · 06:00',
+        object: 'Старт маршрута.',
+        look: 'Проверка всего перед длинной дорогой.',
+        way: 'Выезд на Челябинский тракт.',
+        tips: 'Полный бак и вода обязательны.',
+        voice: 'Старт поездки'
+      },
+      {
+        id: 'ai_view',
+        day: 1,
+        type: 'view',
+        title: 'Река Ай (видовая точка)',
+        badge: 'Панорама',
+        lat: 55.25,
+        lng: 58.45,
+        meta: '15 мая · перед Порогами',
+        object: 'Короткая природная остановка перед основной точкой.',
+        look: 'Скалы, река, ощущение Урала.',
+        way: 'Небольшой съезд с трассы.',
+        tips: '10–20 минут достаточно. Без долгих прогулок.',
+        voice: 'Красивая точка у реки Ай'
       },
       {
         id: 'porogi',
         day: 1,
         type: 'sight',
         title: 'ГЭС Пороги',
-        badge: 'Осмотр',
+        badge: 'Топ',
         lat: 55.0486,
         lng: 58.6668,
-        meta: '15 мая · ~280 км от Екб',
-        object: 'Короткая остановка по пути.',
-        look: 'Старинная ГЭС и индустриальный ландшафт.',
-        way: 'Съезд в сторону Сатки, далее по указателям на Пороги.',
-        tips: 'Последние километры могут быть неидеальными. Связь местами слабая.',
-        voice: 'Скоро поворот на Пороги.'
+        meta: '15 мая',
+        object: 'Одна из самых атмосферных точек маршрута.',
+        look: 'Старая ГЭС и индустриальный пейзаж.',
+        way: 'Через Сатку.',
+        tips: 'Не задерживайся слишком долго — впереди длинный путь.',
+        voice: 'ГЭС Пороги'
       },
       {
         id: 'verhneuralsk',
         day: 1,
-        type: 'spare',
-        title: 'Верхнеуральск',
-        badge: 'Запасной',
+        type: 'historic',
+        title: 'Верхнеуральск (тихий старый город)',
+        badge: 'История',
         lat: 53.8764,
         lng: 59.2103,
-        meta: '15 мая · Промежуточная точка',
-        object: 'Запасная остановка по пути.',
-        look: 'Подходит для короткого отдыха и закупки в дорогу.',
-        way: 'Маршрут проходит через город.',
-        tips: 'Если усталость выше ожидаемой — остановка здесь логична.',
-        voice: 'Проезжаем Верхнеуральск.'
+        meta: '15 мая',
+        object: 'Старый уездный город, ощущение “вне времени”.',
+        look: 'Атмосфера старого Урала без толп.',
+        way: 'Прямо по маршруту.',
+        tips: 'Отличная точка для отдыха и перезагрузки.',
+        voice: 'Верхнеуральск'
       },
       {
         id: 'orsk',
@@ -825,12 +837,27 @@
         badge: 'Ужин',
         lat: 51.2000,
         lng: 58.5667,
-        meta: '15 мая · Вечер',
-        object: 'Крупная точка перед Оренбургом.',
-        look: 'Удобная пауза на еду и перерыв в длинной дороге.',
-        way: 'Въезд в город по основному маршруту.',
-        tips: 'Используй как точку ужина или длинного отдыха.',
-        voice: 'Подъезжаем к Орску.'
+        meta: '15 мая',
+        object: 'Крупный город перед Оренбургом.',
+        look: 'Пауза перед финальным участком.',
+        way: 'По маршруту.',
+        tips: 'Нормальная остановка на еду.',
+        voice: 'Орск'
+      },
+      {
+        id: 'steppe_view',
+        day: 1,
+        type: 'view',
+        title: 'Степная панорама (перед Оренбургом)',
+        badge: 'Степь',
+        lat: 51.5,
+        lng: 55.8,
+        meta: '15 мая',
+        object: 'Переход в настоящую степь.',
+        look: 'Открытое пространство и горизонт.',
+        way: 'Короткий съезд с трассы.',
+        tips: 'Лучше на закате и при хорошем свете.',
+        voice: 'Степная панорама'
       },
       {
         id: 'orenburg',
@@ -840,27 +867,27 @@
         badge: 'База',
         lat: 51.7682,
         lng: 55.0967,
-        meta: '15 мая · Ночлег',
-        object: 'Базовая точка размещения перед следующими этапами.',
-        look: 'Здесь главное — восстановление, питание и сон.',
-        way: 'Финальная точка первого дня.',
-        tips: 'Ужин и сон лучше организовать без лишней вечерней ходьбы.',
-        voice: 'Добро пожаловать в Оренбург. Финиш первого дня.'
+        meta: '15 мая',
+        object: 'Финиш первого дня.',
+        look: 'Главное — отдых и восстановление.',
+        way: 'Финал маршрута.',
+        tips: 'Минимум активности вечером.',
+        voice: 'Оренбург'
       },
       {
-        id: 'center',
+        id: 'embankment',
         day: 2,
-        type: 'sight',
-        title: 'Центр Оренбурга',
-        badge: 'Прогулка',
-        lat: 51.7628,
-        lng: 55.1005,
-        meta: '16 мая · Утро',
-        object: 'Короткая прогулка или выезд на кофе.',
-        look: 'Спокойный режим без перегруза ног.',
-        way: 'Пешком от базы или короткая поездка.',
-        tips: 'Перед стартом лучше не нагуливать лишние километры.',
-        voice: 'Сегодня день отдыха.'
+        type: 'view',
+        title: 'Набережная Урала',
+        badge: 'Лёгкая точка',
+        lat: 51.76,
+        lng: 55.11,
+        meta: '16 мая',
+        object: 'Короткая прогулка без нагрузки.',
+        look: 'Река и спокойная атмосфера.',
+        way: 'В центре города.',
+        tips: '15–30 минут максимум. Ноги не перегружать.',
+        voice: 'Набережная Урала'
       },
       {
         id: 'soliletsk',
@@ -870,33 +897,33 @@
         badge: 'Рекавери',
         lat: 51.1833,
         lng: 54.9833,
-        meta: '16 мая · Солёные озёра',
-        object: 'Точка восстановления перед гонкой.',
-        look: 'Подходит как восстановительная активность, но без перегиба.',
-        way: 'Из Оренбурга на юг по трассе Р239.',
-        tips: 'Не пересиживай в воде. Возьми пресную воду, чтобы смыть соль.',
-        voice: 'Едем на восстановление.'
+        meta: '16 мая',
+        object: 'Восстановление перед стартом.',
+        look: 'Солёные озёра и отдых.',
+        way: 'Из Оренбурга на юг.',
+        tips: 'Не пересиживать в воде.',
+        voice: 'Соль-Илецк'
       },
       {
         id: 'start',
         day: 3,
         type: 'race',
-        title: 'Андреевка (Саракташский район)',
+        title: 'Андреевка (Старт)',
         badge: 'Гонка',
         lat: 51.783,
         lng: 56.36,
-        meta: '17 мая · СТАРТ',
-        object: 'Место проведения забега «Степной Волк».',
-        look: 'Главная цель поездки — приехать спокойно и заранее.',
-        way: 'Из Оренбурга по направлению на Саракташ, затем поворот на Андреевку.',
-        tips: 'Приезжай заранее. Проверь связь, экипировку и навигацию ещё в Оренбурге.',
-        voice: 'Мы прибыли на место старта.'
+        meta: '17 мая',
+        object: 'Место старта.',
+        look: 'Фокус на гонке.',
+        way: 'Через Саракташ.',
+        tips: 'Приехать заранее.',
+        voice: 'Старт гонки'
       }
     ];
 
     const routeGroups = [
-      { id: 'day1', day: 1, ids: ['ekb', 'porogi', 'verhneuralsk', 'orsk', 'orenburg'], color: '#2563eb' },
-      { id: 'day2', day: 2, ids: ['orenburg', 'center', 'soliletsk', 'orenburg'], color: '#059669' },
+      { id: 'day1', day: 1, ids: ['ekb', 'ai_view', 'porogi', 'verhneuralsk', 'orsk', 'steppe_view', 'orenburg'], color: '#2563eb' },
+      { id: 'day2', day: 2, ids: ['orenburg', 'embankment', 'soliletsk', 'orenburg'], color: '#059669' },
       { id: 'day3', day: 3, ids: ['orenburg', 'start'], color: '#dc2626' }
     ];
 
@@ -915,6 +942,7 @@
       currentIndex: -1,
       currentDay: 0,
       routeMode: 'road',
+      mode: 'full',
       isFollowing: false,
       isVoiceEnabled: false,
       watchId: null,
@@ -934,6 +962,16 @@
       2: [[51.0, 54.5], [52.0, 55.3]],
       3: [[51.55, 55.0], [51.95, 56.55]]
     };
+
+    const minimalSet = new Set([
+      'ekb',
+      'ai_view',
+      'porogi',
+      'steppe_view',
+      'orenburg',
+      'soliletsk',
+      'start'
+    ]);
 
     const map = L.map('map', {
       zoomControl: false
@@ -956,6 +994,8 @@
         sight: 'badge-sight',
         food: 'badge-food',
         spare: 'badge-spare',
+        view: 'badge-view',
+        historic: 'badge-historic',
         base: 'badge-base',
         rest: 'badge-rest',
         race: 'badge-race'
@@ -973,11 +1013,34 @@
     }
 
     function getRoutePoints(group) {
-      return group.ids.map(getPointById).filter(Boolean);
+      return group.ids
+        .map(getPointById)
+        .filter(Boolean)
+        .filter(isPointVisible);
     }
 
     function getVisibleRouteGroups() {
       return routeGroups.filter(group => appState.currentDay === 0 || group.day === appState.currentDay);
+    }
+
+    function isPointVisible(point) {
+      if (appState.mode === 'full') return true;
+      return minimalSet.has(point.id);
+    }
+
+    function getVisiblePoints() {
+      return points.filter(isPointVisible);
+    }
+
+    function getVisiblePointsByDay(day) {
+      return points.filter(p => (day === 0 || p.day === day) && isPointVisible(p));
+    }
+
+    function getCurrentVisibleIndex() {
+      const visible = getVisiblePoints();
+      const current = points[appState.currentIndex];
+      if (!current) return -1;
+      return visible.findIndex(p => p.id === current.id);
     }
 
     function getDistanceKm(lat1, lon1, lat2, lon2) {
@@ -1062,23 +1125,32 @@
 
     function renderList() {
       const list = document.getElementById('stopList');
-      list.innerHTML = points.map((p, idx) => `
-        <button
-          class="stop"
-          id="stop-${idx}"
-          type="button"
-          data-day="${p.day}"
-          aria-current="false"
-        >
-          <span class="stop-badge ${getBadgeClass(p.type)}">${p.badge}</span>
-          <div class="stop-title">${p.title}</div>
-          <div class="stop-meta">${p.meta}</div>
-        </button>
-      `).join('');
+      const visiblePoints = getVisiblePoints();
 
-      list.querySelectorAll('.stop').forEach((btn, idx) => {
-        btn.addEventListener('click', () => focusPoint(idx));
+      list.innerHTML = visiblePoints.map((p) => {
+        const originalIndex = points.findIndex(item => item.id === p.id);
+        return `
+          <button
+            class="stop"
+            id="stop-${originalIndex}"
+            type="button"
+            data-day="${p.day}"
+            aria-current="false"
+          >
+            <span class="stop-badge ${getBadgeClass(p.type)}">${p.badge}</span>
+            <div class="stop-title">${p.title}</div>
+            <div class="stop-meta">${p.meta}</div>
+          </button>
+        `;
+      }).join('');
+
+      visiblePoints.forEach((p) => {
+        const idx = points.findIndex(item => item.id === p.id);
+        const btn = document.getElementById(`stop-${idx}`);
+        if (btn) btn.addEventListener('click', () => focusPoint(idx));
       });
+
+      updateStopActiveState();
     }
 
     function renderMarkers() {
@@ -1090,7 +1162,10 @@
           weight: 3,
           fillOpacity: 1
         }).addTo(map);
-        marker.on('click', () => focusPoint(idx));
+        marker.on('click', () => {
+          if (!isPointVisible(points[idx])) return;
+          focusPoint(idx);
+        });
         return marker;
       });
     }
@@ -1136,7 +1211,7 @@
 
     function getCurrentRouteSummary() {
       const point = getCurrentPoint();
-      if (!point) return null;
+      if (!point || !isPointVisible(point)) return null;
 
       const currentGroup = routeGroups.find(group =>
         getRoutePoints(group).some(p => p.id === point.id)
@@ -1164,19 +1239,23 @@
     }
 
     function calculateProgressPercent() {
-      if (appState.currentIndex < 0) return 0;
+      const visible = getVisiblePoints();
+      const currentPoint = getCurrentPoint();
+      if (!currentPoint || !isPointVisible(currentPoint)) return 0;
 
       let total = 0;
       let passed = 0;
 
-      for (let i = 1; i < points.length; i++) {
-        const seg = getDistanceKm(points[i - 1].lat, points[i - 1].lng, points[i].lat, points[i].lng);
+      for (let i = 1; i < visible.length; i++) {
+        const seg = getDistanceKm(visible[i - 1].lat, visible[i - 1].lng, visible[i].lat, visible[i].lng);
         total += seg;
-        if (i <= appState.currentIndex) passed += seg;
+        if (visible[i].id === currentPoint.id || visible[i - 1].id === currentPoint.id || i <= getCurrentVisibleIndex()) {
+          passed += seg;
+        }
       }
 
       if (!total) return 0;
-      return Math.round((passed / total) * 100);
+      return Math.min(100, Math.round((passed / total) * 100));
     }
 
     function updateProgress() {
@@ -1185,7 +1264,7 @@
 
     function updateMetrics() {
       const point = getCurrentPoint();
-      if (!point || !appState.userPos) {
+      if (!point || !appState.userPos || !isPointVisible(point)) {
         document.getElementById('distNext').textContent = 'До точки: —';
         document.getElementById('timeNext').textContent = 'В пути: —';
         return;
@@ -1290,8 +1369,23 @@
       document.getElementById('detailPanel').classList.remove('open');
     }
 
+    function ensureCurrentPointVisibleAfterModeChange() {
+      const current = getCurrentPoint();
+      if (current && isPointVisible(current)) return;
+
+      const candidates = getVisiblePointsByDay(appState.currentDay);
+      const fallback = candidates[0] || getVisiblePoints()[0];
+      if (!fallback) return;
+
+      const newIndex = points.findIndex(p => p.id === fallback.id);
+      if (newIndex >= 0) {
+        appState.currentIndex = newIndex;
+      }
+    }
+
     function focusPoint(index) {
       if (index < 0 || index >= points.length) return;
+      if (!isPointVisible(points[index])) return;
 
       appState.currentIndex = index;
       const point = points[index];
@@ -1337,7 +1431,8 @@
       clearSimpleLines();
 
       getVisibleRouteGroups().forEach(group => {
-        const latlngs = getRoutePoints(group).map(p => [p.lat, p.lng]);
+        const routePoints = getRoutePoints(group);
+        const latlngs = routePoints.map(p => [p.lat, p.lng]);
         if (latlngs.length < 2) return;
 
         const line = L.polyline(latlngs, {
@@ -1422,7 +1517,7 @@
       });
 
       points.forEach((point, idx) => {
-        const visible = day === 0 || point.day === day;
+        const visible = (day === 0 || point.day === day) && isPointVisible(point);
         const item = document.getElementById(`stop-${idx}`);
         if (item) item.style.display = visible ? 'block' : 'none';
 
@@ -1433,10 +1528,16 @@
         }
       });
 
+      ensureCurrentPointVisibleAfterModeChange();
+
       if (appState.routeMode === 'road') buildRoadRoutes();
       else drawSimpleLines();
 
       fitVisibleRoute();
+      updateStopActiveState();
+      updateRouteInfo();
+      updateMetrics();
+      updateProgress();
     }
 
     function toggleRouteMode(mode) {
@@ -1452,12 +1553,43 @@
       }
     }
 
+    function setMode(mode) {
+      appState.mode = mode;
+      saveLocal('steppenwolf_mode', mode);
+
+      document.getElementById('modeMinimalBtn').classList.toggle('btn-active', mode === 'minimal');
+      document.getElementById('modeFullBtn').classList.toggle('btn-active', mode === 'full');
+
+      renderList();
+      applyDayFilter(appState.currentDay);
+
+      ensureCurrentPointVisibleAfterModeChange();
+      const point = getCurrentPoint();
+      if (point && isPointVisible(point)) {
+        openDetailPanel(point);
+      }
+
+      showToast(mode === 'minimal' ? 'Только лучшие точки маршрута' : 'Показаны все точки');
+    }
+
     function nextPoint() {
-      if (appState.currentIndex < points.length - 1) focusPoint(appState.currentIndex + 1);
+      const visible = getVisiblePoints();
+      const currentVisibleIndex = getCurrentVisibleIndex();
+      if (currentVisibleIndex < 0 || currentVisibleIndex >= visible.length - 1) return;
+
+      const next = visible[currentVisibleIndex + 1];
+      const idx = points.findIndex(p => p.id === next.id);
+      if (idx >= 0) focusPoint(idx);
     }
 
     function prevPoint() {
-      if (appState.currentIndex > 0) focusPoint(appState.currentIndex - 1);
+      const visible = getVisiblePoints();
+      const currentVisibleIndex = getCurrentVisibleIndex();
+      if (currentVisibleIndex <= 0) return;
+
+      const prev = visible[currentVisibleIndex - 1];
+      const idx = points.findIndex(p => p.id === prev.id);
+      if (idx >= 0) focusPoint(idx);
     }
 
     function buildYandexMapUrl(point) {
@@ -1476,7 +1608,7 @@
 
     function openExternalNav(provider = 'yandex') {
       const point = getCurrentPoint();
-      if (!point) {
+      if (!point || !isPointVisible(point)) {
         showToast('Сначала выбери точку');
         return;
       }
@@ -1595,6 +1727,8 @@
       document.getElementById('voiceBtn').addEventListener('click', toggleVoice);
       document.getElementById('modeRoadBtn').addEventListener('click', () => toggleRouteMode('road'));
       document.getElementById('modeLineBtn').addEventListener('click', () => toggleRouteMode('line'));
+      document.getElementById('modeMinimalBtn').addEventListener('click', () => setMode('minimal'));
+      document.getElementById('modeFullBtn').addEventListener('click', () => setMode('full'));
       document.getElementById('openYandexBtn').addEventListener('click', () => openExternalNav('yandex'));
       document.getElementById('fitRouteBtn').addEventListener('click', fitVisibleRoute);
       document.getElementById('centerUserBtn').addEventListener('click', () => {
@@ -1650,11 +1784,17 @@
     }
 
     function bootstrap() {
+      const savedMode = loadLocal('steppenwolf_mode', 'full');
+      appState.mode = savedMode === 'minimal' ? 'minimal' : 'full';
+
       renderChecklist();
       renderList();
       renderMarkers();
       bindEvents();
       registerServiceWorker();
+
+      document.getElementById('modeMinimalBtn').classList.toggle('btn-active', appState.mode === 'minimal');
+      document.getElementById('modeFullBtn').classList.toggle('btn-active', appState.mode === 'full');
 
       navigator.serviceWorker?.addEventListener('controllerchange', () => {
         if (appState.reloadingAfterSwUpdate) return;
@@ -1663,15 +1803,24 @@
       });
 
       const savedIndex = loadLocal('steppenwolf_last_point', 0);
-      focusPoint(Number.isInteger(savedIndex) ? savedIndex : 0);
+      const initialIndex = Number.isInteger(savedIndex) ? savedIndex : 0;
+
+      if (points[initialIndex] && isPointVisible(points[initialIndex])) {
+        focusPoint(initialIndex);
+      } else {
+        const fallback = getVisiblePoints()[0];
+        if (fallback) {
+          const idx = points.findIndex(p => p.id === fallback.id);
+          focusPoint(idx);
+        }
+      }
+
       applyDayFilter(0);
 
       setTimeout(() => {
         map.invalidateSize();
         if (appState.routeMode === 'road') buildRoadRoutes();
       }, 300);
-
-      document.getElementById('sidebar').classList.add('open');
 
       window.addEventListener('resize', () => {
         setTimeout(() => map.invalidateSize(), 100);
